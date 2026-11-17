@@ -15,6 +15,18 @@ pipeline {
             }
         }
 
+        stage('Trivy Security Scan') {
+            steps {
+                sh '''
+                    trivy --config "" image \
+                    --scanners vuln \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 1 \
+                    cloudnova-website:${BUILD_NUMBER}
+                '''
+            }
+        }
+
         stage('Deploy Application') {
             steps {
                 sh '''
@@ -35,7 +47,7 @@ pipeline {
             echo 'CloudNova deployment successful!'
         }
         failure {
-            echo 'CloudNova deployment failed. Check the console output.'
+            echo 'Pipeline failed. Check the failed stage and Console Output.'
         }
     }
 }
