@@ -1,8 +1,17 @@
-
 pipeline {
     agent any
 
+    environment {
+        KUBECONFIG = '/var/lib/jenkins/.kube/config'
+        IMAGE_NAME = 'cloudnova-website'
+    }
+
+    options {
+        timestamps()
+    }
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -11,7 +20,10 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t cloudnova-website:${BUILD_NUMBER} .'
+                sh '''
+                    docker build \
+                      -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                '''
             }
         }
 
@@ -19,24 +31,44 @@ pipeline {
             steps {
                 sh '''
                     trivy --config "" image \
-                    --scanners vuln \
-                    --severity HIGH,CRITICAL \
-                    --exit-code 1 \
-                    cloudnova-website:${BUILD_NUMBER}
+                      --scanners vuln \
+                      --exit-code 1 \
+                      --severity HIGH,CRITICAL \
+                      ${IMAGE_NAME}:${BUILD_NUMBER}
                 '''
             }
         }
 
-        stage('Deploy Application') {
+        stage('Load Image into Minikube') {
             steps {
                 sh '''
-                    docker rm -f cloudnova-container || true
+                    sudo -n /usr/local/bin/jenkins-minikube-image-load \
+                      ${IMAGE_NAME}:${BUILD_NUMBER}
+                '''
+            }
+        }
 
-                    docker run -d \
-                      --name cloudnova-container \
-                      --restart unless-stopped \
-                      -p 80:80 \
-                      cloudnova-website:${BUILD_NUMBER}
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                    kubectl set image \
+                      deployment/cloudnova-web \
+                      website=${IMAGE_NAME}:${BUILD_NUMBER} \
+                      -n default
+                '''
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                    kubectl rollout status \
+                      deployment/cloudnova-web \
+                      -n default \
+                      --timeout=180s
+
+                    kubectl get deployment cloudnova-web -n default
+                    kubectl get pods -l app=cloudnova-web -n default
                 '''
             }
         }
@@ -44,8 +76,9 @@ pipeline {
 
     post {
         success {
-            echo 'CloudNova deployment successful!'
+            echo 'CloudNova Kubernetes deployment successful!'
         }
+
         failure {
             echo 'Pipeline failed. Check the failed stage and Console Output.'
         }
