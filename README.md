@@ -1,226 +1,332 @@
-# 🚀 CloudNova – Cloud-Native DevSecOps Platform
+# Cloud-Native DevSecOps Pipeline
 
-A cloud-native DevSecOps project that automates application build, security scanning, deployment, autoscaling, and monitoring using Jenkins, Docker, Kubernetes, Trivy, Prometheus, and Grafana.
+An end-to-end DevSecOps project that takes a static web application (**CloudNova**) from source code to a monitored, security-scanned deployment. Infrastructure is provisioned with **Terraform** on **AWS**, the app is containerized with **Docker**, built and deployed through a **Jenkins** pipeline with **Trivy** vulnerability scanning, run on **Kubernetes (Minikube)**, and monitored with **Prometheus** and **Grafana**.
 
-## 📌 Project Overview
+## Pipeline Overview
 
-CloudNova demonstrates how DevOps and security practices can be integrated into a continuous integration and continuous deployment (CI/CD) workflow.
-
-The platform automatically retrieves application source code from GitHub, builds a Docker image, scans it for vulnerabilities using Trivy, and deploys the image to Kubernetes through Jenkins.
-
-Prometheus and Grafana provide monitoring and visualization of application and infrastructure metrics, while Kubernetes Horizontal Pod Autoscaler (HPA) adjusts the number of application replicas based on CPU utilization.
-
-## 🎯 Project Objectives
-
-- Automate application build and deployment.
-- Integrate container vulnerability scanning into CI/CD.
-- Deploy containerized applications using Kubernetes.
-- Implement automatic scaling based on CPU utilization.
-- Monitor application and cluster performance.
-- Configure alerts for important application conditions.
-
-## 🏗️ Architecture
-
-```mermaid
-flowchart TD
-    A[Developer] --> B[GitHub Repository]
-    B --> C[Jenkins CI/CD Pipeline]
-    C --> D[Docker Image Build]
-    D --> E[Trivy Vulnerability Scan]
-    E --> F[Load Image into Minikube]
-    F --> G[Kubernetes Deployment]
-    G --> H[Kubernetes Service]
-    H --> I[CloudNova Website]
-
-    J[Internet Traffic] --> K[Host Nginx Reverse Proxy]
-    K --> H
-
-    G --> L[Prometheus]
-    C --> L
-    L --> M[Grafana Dashboards]
-    M --> N[Grafana Alerts]
-    G --> O[Horizontal Pod Autoscaler]
+```
+GitHub  -->  Jenkins  -->  Docker Build  -->  Trivy Scan  -->  Deploy  -->  Kubernetes  -->  Prometheus / Grafana
+(source)    (CI/CD)       (image)           (HIGH/CRITICAL    (container)   (Minikube)       (monitoring & alerts)
+                                             gate)
 ```
 
-**Traffic flow:**
+Jenkins pipeline stages (from the `Jenkinsfile`):
 
-Internet → AWS EC2 Nginx → Kubernetes NodePort → Kubernetes Service → CloudNova Website Pods.
+1. **Checkout**: pull the code from GitHub
+2. **Build Docker Image**: `docker build -t cloudnova-website:${BUILD_NUMBER} .`
+3. **Trivy Security Scan**: fail the build on `HIGH` / `CRITICAL` vulnerabilities
+4. **Deploy Application**: run the container on port 80
 
-## 🛠️ Technologies Used
+## Tech Stack
 
-| Category | Technologies |
+| Area | Tool |
 |---|---|
-| Cloud | AWS EC2 |
-| Operating System | Ubuntu Linux |
-| Source Control | Git, GitHub |
+| Infrastructure as Code | Terraform |
+| Cloud | AWS EC2 (Ubuntu 24.04, `us-east-1`) |
+| Containerization | Docker, Nginx |
 | CI/CD | Jenkins |
-| Containerization | Docker |
-| Security Scanning | Trivy |
-| Orchestration | Kubernetes, Minikube |
-| Package Management | Helm |
-| Monitoring | Prometheus |
-| Visualization | Grafana |
-| Autoscaling | Kubernetes HPA |
-| Web Server | Nginx |
-| Application | HTML, CSS, JavaScript |
+| Security scanning | Trivy |
+| Orchestration | Kubernetes (Minikube, kubectl) |
+| Package manager | Helm |
+| Monitoring and alerting | Prometheus, Grafana |
+| Source control | Git, GitHub |
 
-## ⚙️ CI/CD Pipeline
+## Repository Structure
 
-The Jenkins pipeline automates the following stages:
-
-1. **Checkout:** Retrieves the latest source code from GitHub.
-2. **Docker Build:** Builds a Docker image with a unique Jenkins build number.
-3. **Trivy Security Scan:** Scans the image for HIGH and CRITICAL vulnerabilities and fails the pipeline if they are detected.
-4. **Load Image:** Loads the successfully scanned image into Minikube.
-5. **Kubernetes Deployment:** Updates the existing Kubernetes deployment with the new image.
-6. **Deployment Verification:** Checks the rollout status and verifies running pods.
-
-## 🔐 Security Implementation
-
-- Integrated Trivy container image vulnerability scanning.
-- Configured a security gate for HIGH and CRITICAL vulnerabilities.
-- Updated vulnerable Alpine packages in the Docker image.
-- Configured a dedicated Kubernetes service account for Jenkins deployment.
-- Applied namespace-scoped Kubernetes RBAC permissions.
-- Used SSH tunnels to access Jenkins, Prometheus, and Grafana rather than exposing their administrative ports publicly.
-
-## ☸️ Kubernetes Implementation
-
-The application runs as a Kubernetes Deployment with:
-
-- Minimum replicas: 3
-- Maximum replicas: 5
-- CPU autoscaling target: 70%
-- Readiness and liveness HTTP probes
-- CPU request: 100m
-- CPU limit: 500m
-- Memory request: 64Mi
-- Memory limit: 128Mi
-
-The Horizontal Pod Autoscaler increases or decreases the number of application replicas based on CPU utilization.
-
-## 📊 Monitoring and Alerting
-
-Prometheus collects metrics from Kubernetes and Jenkins.
-
-Grafana provides dashboards for:
-
-- Kubernetes pod CPU usage.
-- Kubernetes pod memory usage.
-- Running website pods.
-- Available deployment replicas.
-- Horizontal Pod Autoscaler replica counts.
-- Jenkins performance metrics.
-
-**Grafana alerts configured:**
-
-- CloudNova-Website-Replicas-Low
-- CloudNova-Website-High-CPU
-
-These alerts help identify resource pressure and reduced application availability.
-
-## 🧪 Testing and Validation
-
-The project was validated through:
-
-- Successful Jenkins CI/CD pipeline execution.
-- Docker image vulnerability scanning.
-- Kubernetes deployment rollout verification.
-- Application HTTP health checks.
-- Controlled CPU load testing.
-- HPA scaling from 3 to 5 replicas.
-- Prometheus metrics verification.
-- Grafana dashboard and alert verification.
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- AWS EC2 Ubuntu instance.
-- Docker.
-- Jenkins.
-- kubectl.
-- Minikube.
-- Helm.
-- Trivy.
-- Prometheus and Grafana.
-
-### Clone the repository
-
-```bash
-git clone https://github.com/somnathsingh712/cloud-native-devsecops.git
-
-cd cloud-native-devsecops
+```
+.
+├── css/
+├── js/
+├── Dockerfile
+├── Jenkinsfile
+├── index.html
+├── about.html
+├── services.html
+├── contact.html
+└── README.md
 ```
 
-### Build the Docker image
+## Ports Used
 
-```bash
-docker build -t cloudnova-website:latest .
-```
+| Service | Port |
+|---|---|
+| Web application | 80 |
+| Jenkins | 8080 |
+| Application (Kubernetes port-forward) | 8081 |
+| Prometheus | 9090 |
+| Grafana | 3000 |
 
-### Scan the Docker image
+## Step-by-Step Implementation
 
-```bash
-trivy --config "" image \
-  --scanners vuln \
-  --exit-code 1 \
-  --severity HIGH,CRITICAL \
-  cloudnova-website:latest
-```
 
-### Check Kubernetes deployment
+### 1. Infrastructure Provisioning (Terraform + AWS)
 
-```bash
-kubectl get deployments
-kubectl get pods
-kubectl get services
-```
+#### Step 1: Check prerequisites
 
-### Check autoscaling
+Verify that Git, Docker, VS Code, WSL and Terraform are installed on the local machine.
 
-```bash
-kubectl get hpa
-```
+![Step 1: Check prerequisites](images/step-image01.png)
 
-### Check monitoring components
+#### Step 2: Create the EC2 instance with Terraform
 
-```bash
-kubectl get pods -n monitoring
-```
+An Ubuntu 24.04 EC2 instance is provisioned in `us-east-1` using Terraform, along with a security group with the required inbound rules (SSH restricted to my IP, plus the application and tool ports).
 
-> Note: The Jenkins pipeline uses a configured Minikube image-loading wrapper and a dedicated Kubernetes deployment configuration. The commands above are useful for basic verification; a fresh environment also requires the project-specific infrastructure and access configuration.
+![Step 2: Create the EC2 instance with Terraform](images/step-image02.png)
 
-## 📚 Key Learning Outcomes
+![Step 2: Create the EC2 instance with Terraform](images/step-image03.png)
 
-- Practical implementation of CI/CD pipelines.
-- Container security and vulnerability management.
-- Kubernetes deployment and orchestration.
-- Horizontal Pod Autoscaling.
-- Monitoring with Prometheus and Grafana.
-- Jenkins integration with Kubernetes.
-- Linux administration and AWS EC2 management.
-- Troubleshooting real-world DevOps deployment issues.
+#### Step 3: Connect to the instance via SSH
 
-## 🔮 Future Enhancements
+![Step 3: Connect to the instance via SSH](images/step-image04.png)
 
-- HTTPS using SSL/TLS certificates.
-- Infrastructure provisioning using Terraform.
-- Centralized logging using Loki.
-- Automated deployment through GitHub webhooks.
-- Integration of additional security testing tools.
-- Migration from Minikube to Amazon EKS.
+### 2. Containerizing the Application (Docker)
 
-## 👨‍💻 Author
+#### Step 4: Install Git, Docker and related packages
 
-**Somnath Singh Yadav**
+![Step 4: Install Git, Docker and related packages](images/step-image05.png)
 
-B.Tech – Information Technology
+#### Step 5: Clone the application repository
 
-GitHub: [somnathsingh712](https://github.com/somnathsingh712)
+Clone the web application repository that was pushed to GitHub.
 
-Project Repository: [CloudNova – Cloud-Native DevSecOps](https://github.com/somnathsingh712/cloud-native-devsecops)
+![Step 5: Clone the application repository](images/step-image06.png)
 
----
+#### Step 6: Application structure
 
-⭐ If you find this project interesting, feel free to explore the repository.
+A static website (`index.html`, `about.html`, `services.html`, `contact.html`, plus `css/` and `js/`).
+
+![Step 6: Application structure](images/step-image07.png)
+
+#### Step 7: Create the Dockerfile
+
+Create a `Dockerfile` (`nano Dockerfile`) that serves the site with Nginx.
+
+![Step 7: Create the Dockerfile](images/step-image08.png)
+
+#### Step 8: Build the Docker image
+
+![Step 8: Build the Docker image](images/step-image09.png)
+
+#### Step 9: Run the container and test locally
+
+`HTTP/1.1 200 OK` and `Server: nginx` confirm the container is serving the site correctly.
+
+![Step 9: Run the container and test locally](images/step-image10.png)
+
+#### Step 10: Access the app in the browser
+
+Open `http://<EC2_PUBLIC_IP>` to see the running project.
+
+![Step 10: Access the app in the browser](images/step-image11.png)
+
+### 3. CI/CD with Jenkins
+
+#### Step 11: Install Java
+
+![Step 11: Install Java](images/step-image12.png)
+
+#### Step 12: Add the Jenkins repository key and LTS repository
+
+![Step 12: Add the Jenkins repository key and LTS repository](images/step-image13.png)
+
+#### Step 13: Install Jenkins
+
+![Step 13: Install Jenkins](images/step-image14.png)
+
+#### Step 14: Start Jenkins and check its status
+
+![Step 14: Start Jenkins and check its status](images/step-image15.png)
+
+#### Step 15: Access Jenkins from Windows using SSH tunnelling
+
+![Step 15: Access Jenkins from Windows using SSH tunnelling](images/step-image16.png)
+
+#### Step 16: Open `localhost:8080`
+
+The *Unlock Jenkins* page opens through the tunnel.
+
+![Step 16: Open `localhost:8080`](images/step-image17.png)
+
+#### Step 17: Install suggested plugins
+
+![Step 17: Install suggested plugins](images/step-image18.png)
+
+![Step 17: Install suggested plugins](images/step-image19.png)
+
+#### Step 18: Create the admin user
+
+![Step 18: Create the admin user](images/step-image20.png)
+
+#### Step 19: Add Jenkins to the `docker` group
+
+![Step 19: Add Jenkins to the `docker` group](images/step-image21.png)
+
+#### Step 20: Verify Docker access from Jenkins
+
+![Step 20: Verify Docker access from Jenkins](images/step-image22.png)
+
+#### Step 21: Progress checkpoint
+
+At this point three things are complete: infrastructure provisioned, application containerized, and Jenkins installed.
+
+![Step 21: Progress checkpoint](images/step-image23.png)
+
+#### Step 22: Add the Jenkinsfile and Dockerfile to the GitHub repository
+
+![Step 22: Add the Jenkinsfile and Dockerfile to the GitHub repository](images/step-image24.png)
+
+#### Step 23: Create a new pipeline job
+
+Click **New Item** and create a Pipeline job.
+
+![Step 23: Create a new pipeline job](images/step-image25.png)
+
+#### Step 24: Configure the repository and branch, then build
+
+Enter the repository URL, set the branch to `main`, save, and click **Build Now**.
+
+![Step 24: Configure the repository and branch, then build](images/step-image26.png)
+
+#### Step 25: Pipeline runs successfully
+
+All stages complete successfully.
+
+![Step 25: Pipeline runs successfully](images/step-image27.png)
+
+![Step 25: Pipeline runs successfully](images/step-image28.png)
+
+#### Step 26: Confirm the container is running
+
+![Step 26: Confirm the container is running](images/step-image29.png)
+
+![Step 26: Confirm the container is running](images/step-image30.png)
+
+### 4. Security Scanning (Trivy)
+
+#### Step 27: Install Trivy
+
+![Step 27: Install Trivy](images/step-image31.png)
+
+![Step 27: Install Trivy](images/step-image32.png)
+
+#### Step 28: Add the Trivy scan stage to the Jenkinsfile
+
+The scan checks the built image for `HIGH` and `CRITICAL` vulnerabilities and fails the build (`--exit-code 1`) if any are found.
+
+![Step 28: Add the Trivy scan stage to the Jenkinsfile](images/step-image33.png)
+
+#### Step 29: Trivy scan during the Jenkins build
+
+Trivy runs automatically on every build.
+
+![Step 29: Trivy scan during the Jenkins build](images/step-image34.png)
+
+![Step 29: Trivy scan during the Jenkins build](images/step-image35.png)
+
+### 5. Kubernetes Deployment (Minikube)
+
+#### Step 30: Download kubectl
+
+![Step 30: Download kubectl](images/step-image36.png)
+
+#### Step 31: Verify kubectl
+
+![Step 31: Verify kubectl](images/step-image37.png)
+
+#### Step 32: Install Minikube and check its status
+
+![Step 32: Install Minikube and check its status](images/step-image38.png)
+
+#### Step 33: Create the Kubernetes deployment file
+
+![Step 33: Create the Kubernetes deployment file](images/step-image39.png)
+
+#### Step 34: Check the deployment and pods
+
+![Step 34: Check the deployment and pods](images/step-image40.png)
+
+![Step 34: Check the deployment and pods](images/step-image41.png)
+
+#### Step 35: Port-forward to 8081
+
+Forward the service to port 8081 and connect through SSH from a new PowerShell window.
+
+![Step 35: Port-forward to 8081](images/step-image42.png)
+
+#### Step 36: Self-healing demonstrated
+
+Kubernetes automatically created a third replica and assigned it an IP.
+
+![Step 36: Self-healing demonstrated](images/step-image43.png)
+
+### 6. Monitoring and Alerting (Prometheus + Grafana)
+
+#### Step 37: Install Helm
+
+![Step 37: Install Helm](images/step-image44.png)
+
+#### Step 38: Install Prometheus
+
+Install Prometheus with Helm and create `prometheus-custom-values.yaml`.
+
+![Step 38: Install Prometheus](images/step-image45.png)
+
+#### Step 39: Access Prometheus on port 9090
+
+Port-forward Prometheus to 9090 and connect through SSH in a new PowerShell window.
+
+![Step 39: Access Prometheus on port 9090](images/step-image46.png)
+
+![Step 39: Access Prometheus on port 9090](images/step-image47.png)
+
+#### Step 40: Install and configure Grafana
+
+![Step 40: Install and configure Grafana](images/step-image48.png)
+
+#### Step 41: Access Grafana on port 3000
+
+Port-forward Grafana to 3000, connect through SSH, and log in as `admin` with the generated password.
+
+![Step 41: Access Grafana on port 3000](images/step-image49.png)
+
+#### Step 42: Add Prometheus as a data source
+
+Go to **Connections → Data sources → Prometheus**, enter the connection URL, then **Save & test**.
+
+![Step 42: Add Prometheus as a data source](images/step-image50.png)
+
+#### Step 43: Import a dashboard
+
+![Step 43: Import a dashboard](images/step-image51.png)
+
+![Step 43: Import a dashboard](images/step-image52.png)
+
+#### Step 44: Add the Prometheus metrics plugin to Jenkins
+
+Go to **Manage Jenkins → Available plugins → Prometheus metrics**.
+
+![Step 44: Add the Prometheus metrics plugin to Jenkins](images/step-image53.png)
+
+#### Step 45: Add more metrics
+
+![Step 45: Add more metrics](images/step-image54.png)
+
+#### Step 46: Set up alerting
+
+![Step 46: Set up alerting](images/step-image55.png)
+
+## Key Takeaways
+
+- Infrastructure is reproducible because it is defined as code with Terraform.
+- Security is built into the pipeline: Trivy scans every image and fails the build on serious vulnerabilities before anything is deployed.
+- Kubernetes provides self-healing, as shown by the automatic replica recreation.
+- Prometheus and Grafana give visibility into the cluster and Jenkins, with alerting configured.
+
+## Notes
+
+- Replace `<EC2_PUBLIC_IP>` with the public IP of your own EC2 instance. Never commit private keys (`.pem`), passwords or tokens to the repository.
+- Remember to destroy the AWS resources when finished (`terraform destroy`) to avoid unexpected charges.
+
+## Author
+
+**Somnath Singh**: [GitHub](https://github.com/somnathsingh712)
